@@ -1,0 +1,15 @@
+meta {
+  name: 09 - Tempo médio do serviço
+  type: http
+  seq: 9
+}
+
+get {
+  url: {{baseUrl}}/execucoes/servicos/{{servicoId}}/tempo-medio
+  body: none
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{token}}
+}

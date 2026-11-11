@@ -1,0 +1,21 @@
+meta {
+  name: 08 - Registrar falha (dispara compensações)
+  type: http
+  seq: 8
+}
+
+patch {
+  url: {{baseUrl}}/execucoes/{{ordemServicoId}}/falhar
+  body: json
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{token}}
+}
+
+body:json {
+  {
+    "motivo": "Bloco do motor trincado"
+  }
+}

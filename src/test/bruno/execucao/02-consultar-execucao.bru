@@ -1,0 +1,15 @@
+meta {
+  name: 02 - Consultar execução da OS
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/execucoes/{{ordemServicoId}}
+  body: none
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{token}}
+}

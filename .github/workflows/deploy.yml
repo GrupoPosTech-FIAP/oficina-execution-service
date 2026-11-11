@@ -1,0 +1,99 @@
+name: CD - Deploy na AWS (EKS)
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "v*"
+
+env:
+  AWS_REGION: us-east-1
+  EKS_CLUSTER: eks-oficina-terraform
+  ECR_REPOSITORY: oficina-execution-service
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout do código
+        uses: actions/checkout@v4
+
+      - name: Definir tag da imagem
+        id: meta
+        run: |
+          if [ "${{ github.ref_type }}" = "tag" ]; then
+            echo "tag=${{ github.ref_name }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "tag=${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Configurar credenciais AWS
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      # As tabelas vêm do oficina-infra-database (dynamodb.tf); sem elas o serviço não sobe
+      - name: Conferir as tabelas do DynamoDB
+        run: |
+          for tabela in oficina-execucoes oficina-execution-outbox; do
+            if ! aws dynamodb describe-table --table-name "$tabela" >/dev/null 2>&1; then
+              echo "::error::Tabela $tabela não encontrada. Rode o deploy do oficina-infra-database antes."
+              exit 1
+            fi
+          done
+
+      - name: Login no ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build e push da imagem
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        run: |
+          IMAGE="$ECR_REGISTRY/$ECR_REPOSITORY:${{ steps.meta.outputs.tag }}"
+          docker build -t "$IMAGE" .
+          docker push "$IMAGE" || echo "⚠️ Imagem já existe no ECR. Pulando push e prosseguindo com o deploy..."
+
+      - name: Configurar kubeconfig do EKS
+        run: aws eks update-kubeconfig --name "$EKS_CLUSTER" --region "$AWS_REGION"
+
+      - name: Gerar Secret a partir dos GitHub Secrets
+        run: |
+          cat > k8s/overlays/aws/secret.yaml <<EOF
+          apiVersion: v1
+          kind: Secret
+          metadata:
+            name: execution-secret
+          type: Opaque
+          data:
+            JWT_SECRET: $(printf '%s' "${{ secrets.JWT_SECRET }}" | base64 -w0)
+          EOF
+
+      - name: Apontar a imagem publicada no overlay
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        run: |
+          sed -i "s|newName:.*|newName: ${ECR_REGISTRY}/${ECR_REPOSITORY}|" k8s/overlays/aws/kustomization.yaml
+          sed -i "s|newTag:.*|newTag: \"${{ steps.meta.outputs.tag }}\"|" k8s/overlays/aws/kustomization.yaml
+
+      # Tópico e fila são criados pelo oficina-infra-cluster (messaging.tf). ARN e URL
+      # contêm o account ID da sessão, então são resolvidos aqui pelo nome.
+      - name: Apontar a mensageria (SNS/SQS)
+        run: |
+          TOPICO_ARN=$(aws sns list-topics --query "Topics[?ends_with(TopicArn, ':oficina-execution-events')].TopicArn | [0]" --output text)
+          FILA_URL=$(aws sqs get-queue-url --queue-name oficina-execution-queue --query QueueUrl --output text)
+          if [ -z "$TOPICO_ARN" ] || [ "$TOPICO_ARN" = "None" ]; then
+            echo "::error::Tópico oficina-execution-events não encontrado. Rode o deploy do oficina-infra-cluster antes."
+            exit 1
+          fi
+          sed -i "s|MENSAGERIA_TOPICO_ARN:.*|MENSAGERIA_TOPICO_ARN: ${TOPICO_ARN}|" k8s/overlays/aws/configmap-aws.yaml
+          sed -i "s|MENSAGERIA_FILA_URL:.*|MENSAGERIA_FILA_URL: ${FILA_URL}|" k8s/overlays/aws/configmap-aws.yaml
+
+      - name: Deploy no cluster (aplica os manifestos)
+        run: kubectl apply -k k8s/overlays/aws
+
+      - name: Aguardar o rollout
+        run: kubectl rollout status deploy/oficina-execution --timeout=300s

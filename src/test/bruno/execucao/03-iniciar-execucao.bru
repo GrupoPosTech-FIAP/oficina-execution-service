@@ -1,0 +1,15 @@
+meta {
+  name: 03 - Iniciar execução
+  type: http
+  seq: 3
+}
+
+patch {
+  url: {{baseUrl}}/execucoes/{{ordemServicoId}}/iniciar
+  body: none
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{token}}
+}

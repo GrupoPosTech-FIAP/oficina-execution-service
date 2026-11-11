@@ -1,0 +1,15 @@
+meta {
+  name: 04 - Iniciar serviço da OS
+  type: http
+  seq: 4
+}
+
+patch {
+  url: {{baseUrl}}/execucoes/{{ordemServicoId}}/tarefas/{{servicoId}}/iniciar
+  body: none
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{token}}
+}

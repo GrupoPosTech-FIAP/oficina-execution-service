@@ -1,0 +1,15 @@
+meta {
+  name: 01 - Fila de execução
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/execucoes?status=NA_FILA
+  body: none
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{token}}
+}

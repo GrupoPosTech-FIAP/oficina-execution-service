@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: execution-config
+data:
+  # Mensageria (ADR 005 em oficina-app-api). ARN e URL dependem do account ID da sessão do
+  # Learner Lab: o deploy.yml resolve os valores reais pelo nome do tópico/fila antes do apply.
+  MENSAGERIA_HABILITADA: "true"
+  MENSAGERIA_TOPICO_ARN: arn:aws:sns:us-east-1:ACCOUNT_ID:oficina-execution-events
+  MENSAGERIA_FILA_URL: https://sqs.us-east-1.amazonaws.com/ACCOUNT_ID/oficina-execution-queue

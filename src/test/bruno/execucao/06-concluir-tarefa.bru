@@ -1,0 +1,15 @@
+meta {
+  name: 06 - Concluir serviço da OS
+  type: http
+  seq: 6
+}
+
+patch {
+  url: {{baseUrl}}/execucoes/{{ordemServicoId}}/tarefas/{{servicoId}}/concluir
+  body: none
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{token}}
+}

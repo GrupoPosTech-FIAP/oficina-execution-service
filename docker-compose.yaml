@@ -1,0 +1,39 @@
+services:
+  execution-localstack:
+    # Versão fixada: DynamoDB (banco do serviço) e SNS/SQS (mensageria da Saga, ADR 005 em oficina-app-api)
+    image: localstack/localstack:4.4.0
+    container_name: execution-localstack
+    ports:
+      - "${LOCALSTACK_PORT:-4566}:4566"
+    environment:
+      SERVICES: dynamodb,sns,sqs
+      AWS_DEFAULT_REGION: us-east-1
+    volumes:
+      - ./localstack/init-mensageria.sh:/etc/localstack/init/ready.d/init-mensageria.sh
+    healthcheck:
+      test: ["CMD-SHELL", "test -f /tmp/mensageria-pronta"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  execution-app:
+    build: .
+    container_name: execution-app
+    restart: unless-stopped
+    ports:
+      - "${APP_PORT:-8084}:8084"
+    environment:
+      # DynamoDB no LocalStack; as tabelas são criadas pela aplicação na subida
+      DYNAMODB_ENDPOINT: http://execution-localstack:4566
+      DYNAMODB_CRIAR_TABELAS: "true"
+      # Mensageria (LocalStack)
+      MENSAGERIA_HABILITADA: "true"
+      MENSAGERIA_ENDPOINT: http://execution-localstack:4566
+      MENSAGERIA_TOPICO_ARN: arn:aws:sns:us-east-1:000000000000:oficina-execution-events
+      MENSAGERIA_FILA_URL: http://execution-localstack:4566/000000000000/oficina-execution-queue
+      AWS_REGION: us-east-1
+      AWS_ACCESS_KEY_ID: test
+      AWS_SECRET_ACCESS_KEY: test
+    depends_on:
+      execution-localstack:
+        condition: service_healthy

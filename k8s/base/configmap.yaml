@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: execution-config
+data:
+  SERVER_PORT: "8084"
+  AWS_REGION: us-east-1
+  # Tabelas criadas pelo Terraform em oficina-infra-database (dynamodb.tf)
+  DYNAMODB_TABELA_EXECUCOES: oficina-execucoes
+  DYNAMODB_TABELA_OUTBOX: oficina-execution-outbox
+  DYNAMODB_CRIAR_TABELAS: "false"
