@@ -20,6 +20,11 @@
 		<maven.compiler.release>25</maven.compiler.release>
 		<aws-sdk.version>2.57.11</aws-sdk.version>
 		<testcontainers.version>1.21.4</testcontainers.version>
+		<!-- SonarCloud (análise no CI, ver .github/workflows/maven.yml) -->
+		<sonar.organization>grupopostech-fiap</sonar.organization>
+		<sonar.projectKey>GrupoPosTech-FIAP_oficina-execution-service</sonar.projectKey>
+		<sonar.host.url>https://sonarcloud.io</sonar.host.url>
+		<sonar.coverage.exclusions>**/OficinaExecutionServiceApplication.java</sonar.coverage.exclusions>
 	</properties>
 	<dependencyManagement>
 		<dependencies>
