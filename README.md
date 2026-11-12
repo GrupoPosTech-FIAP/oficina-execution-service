@@ -136,6 +136,12 @@ subida (`DYNAMODB_CRIAR_TABELAS=true`).
 O JaCoCo exige **80% de linhas** no `verify` (CI). Relatório em `target/site/jacoco/index.html`.
 Cobertura atual: **99,7%** de linhas (47 testes).
 
+[![Quality Gate](https://sonarcloud.io/api/project_badges/measure?project=GrupoPosTech-FIAP_oficina-execution-service&metric=alert_status)](https://sonarcloud.io/summary/overall?id=GrupoPosTech-FIAP_oficina-execution-service) [![Coverage](https://sonarcloud.io/api/project_badges/measure?project=GrupoPosTech-FIAP_oficina-execution-service&metric=coverage)](https://sonarcloud.io/component_measures?id=GrupoPosTech-FIAP_oficina-execution-service&metric=coverage)
+
+O CI também analisa o código no
+[SonarCloud](https://sonarcloud.io/summary/overall?id=GrupoPosTech-FIAP_oficina-execution-service) e falha se
+o quality gate reprovar (roda quando o secret `SONAR_TOKEN` existe na organização).
+
 ## Deploy
 
 Ordem: `oficina-infra-cluster` (ECR, tópicos e filas) → `oficina-infra-database` (tabelas DynamoDB)

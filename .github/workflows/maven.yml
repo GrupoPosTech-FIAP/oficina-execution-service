@@ -12,18 +12,44 @@ jobs:
     timeout-minutes: 20
     permissions:
       contents: write
+      pull-requests: read
+    env:
+      # secret da organização; sem ele (ex.: PR de fork) a análise do SonarCloud é pulada
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
     steps:
     - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0 # o Sonar usa o histórico completo para identificar o código novo
     - name: Set up JDK 25
       uses: actions/setup-java@v4
       with:
         java-version: '25'
         distribution: 'temurin'
         cache: maven
-    - name: Build with Maven
+
+    # verify roda os testes e o JaCoCo, que reprova o build abaixo de 80% de linhas
+    - name: Build, testes e cobertura mínima de 80%
       run: chmod +x mvnw && ./mvnw -B verify --file pom.xml
 
-    - name: Update dependency graph
-      uses: advanced-security/maven-dependency-submission-action@b275d12641ac2d2108b2cbb7598b154ad2f2cee8
+    - name: Resumo da cobertura
+      run: |
+        awk -F, 'NR>1 {perdidas+=$8; cobertas+=$9}
+          END {printf "Cobertura de linhas: %.1f%% (%d de %d)\n", 100*cobertas/(perdidas+cobertas), cobertas, perdidas+cobertas}' \
+          target/site/jacoco/jacoco.csv | tee -a "$GITHUB_STEP_SUMMARY"
 
+    - name: Análise de qualidade (SonarCloud)
+      if: ${{ env.SONAR_TOKEN != '' }}
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      # quality gate reprovado falha o build
+      run: ./mvnw -B org.sonarsource.scanner.maven:sonar-maven-plugin:5.1.0.4751:sonar -Dsonar.qualitygate.wait=true
+
+    - name: SonarCloud não configurado
+      if: ${{ env.SONAR_TOKEN == '' }}
+      run: echo "::warning::Secret SONAR_TOKEN ausente; análise do SonarCloud pulada."
+
+    # Repositório novo: enquanto o Dependency graph não for ligado nas configurações, o envio falha sem afetar o build
+    - name: Update dependency graph
+      continue-on-error: true
+      uses: advanced-security/maven-dependency-submission-action@b275d12641ac2d2108b2cbb7598b154ad2f2cee8
