@@ -70,6 +70,8 @@ jobs:
           type: Opaque
           data:
             JWT_SECRET: $(printf '%s' "${{ secrets.JWT_SECRET }}" | base64 -w0)
+            OTEL_EXPORTER_OTLP_HEADERS: $(printf 'api-key=%s' "${{ secrets.NEW_RELIC_LICENSE_KEY }}" | base64 -w0)
+            OTEL_SDK_DISABLED: $(printf '%s' "${{ secrets.NEW_RELIC_LICENSE_KEY != '' && 'false' || 'true' }}" | base64 -w0)
           EOF
 
       - name: Apontar a imagem publicada no overlay
