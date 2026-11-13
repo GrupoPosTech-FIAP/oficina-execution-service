@@ -34,6 +34,16 @@ services:
       AWS_REGION: us-east-1
       AWS_ACCESS_KEY_ID: test
       AWS_SECRET_ACCESS_KEY: test
+      # Observabilidade: sem NEW_RELIC_LICENSE_KEY no .env o agente fica desligado
+      OTEL_SERVICE_NAME: oficina-execution-service
+      OTEL_RESOURCE_ATTRIBUTES: service.namespace=oficina
+      OTEL_SDK_DISABLED: ${OTEL_SDK_DISABLED:-true}
+      OTEL_TRACES_EXPORTER: otlp
+      OTEL_METRICS_EXPORTER: otlp
+      OTEL_LOGS_EXPORTER: otlp
+      OTEL_EXPORTER_OTLP_PROTOCOL: http/protobuf
+      OTEL_EXPORTER_OTLP_ENDPOINT: https://otlp.nr-data.net:4318
+      OTEL_EXPORTER_OTLP_HEADERS: api-key=${NEW_RELIC_LICENSE_KEY:-}
     depends_on:
       execution-localstack:
         condition: service_healthy

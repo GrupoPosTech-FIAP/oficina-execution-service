@@ -9,3 +9,12 @@ data:
   DYNAMODB_TABELA_EXECUCOES: oficina-execucoes
   DYNAMODB_TABELA_OUTBOX: oficina-execution-outbox
   DYNAMODB_CRIAR_TABELAS: "false"
+  # Observabilidade (ADR 002 da app-api): agente OpenTelemetry exportando por OTLP para o New Relic.
+  # A license key (OTEL_EXPORTER_OTLP_HEADERS) e o liga/desliga (OTEL_SDK_DISABLED) vêm do Secret.
+  OTEL_SERVICE_NAME: oficina-execution-service
+  OTEL_RESOURCE_ATTRIBUTES: service.namespace=oficina
+  OTEL_TRACES_EXPORTER: otlp
+  OTEL_METRICS_EXPORTER: otlp
+  OTEL_LOGS_EXPORTER: otlp
+  OTEL_EXPORTER_OTLP_PROTOCOL: http/protobuf
+  OTEL_EXPORTER_OTLP_ENDPOINT: https://otlp.nr-data.net:4318

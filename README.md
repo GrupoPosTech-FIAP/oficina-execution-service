@@ -10,7 +10,7 @@ Faz parte da Saga coreografada descrita na
 ## Stack
 
 Java 25 · Spring Boot 4.1 · **Amazon DynamoDB** (AWS SDK v2) · SNS/SQS · Spring Security + JWT ·
-OpenAPI/Swagger · JaCoCo · Testcontainers (DynamoDB Local) · Docker / Kubernetes (Kustomize).
+OpenAPI/Swagger · OpenTelemetry + New Relic · JaCoCo · Testcontainers (DynamoDB Local) · Docker / Kubernetes (Kustomize).
 
 ## Arquitetura
 
@@ -142,10 +142,22 @@ O CI também analisa o código no
 [SonarCloud](https://sonarcloud.io/summary/overall?id=GrupoPosTech-FIAP_oficina-execution-service) e falha se
 o quality gate reprovar (roda quando o secret `SONAR_TOKEN` existe na organização).
 
+## Observabilidade
+
+A imagem roda com o agente do **OpenTelemetry** (como na app-api, ADR 002), que exporta traces, métricas e logs por OTLP
+para o **New Relic** como `service.name=oficina-execution-service` (`service.namespace=oficina`). O agente captura HTTP, banco, SNS/SQS
+e o relay do outbox sem dependência no código; os logs da Saga trazem `saga_id` e `event_type` para acompanhar uma OS
+entre os serviços. Consultas NRQL e alertas: [monitoramento e observabilidade](https://github.com/GrupoPosTech-FIAP/oficina-app-api/blob/main/docs/monitoramento-e-observabilidade.md).
+
+- **AWS:** as variáveis `OTEL_*` ficam no `k8s/base/configmap.yaml`; o `deploy.yml` monta a license key a partir do
+  secret `NEW_RELIC_LICENSE_KEY` e desliga o agente (`OTEL_SDK_DISABLED=true`) quando ele não existe.
+- **Local:** no `docker-compose` o agente vem desligado; para ligar, defina `NEW_RELIC_LICENSE_KEY` e
+  `OTEL_SDK_DISABLED=false` no `.env`.
+
 ## Deploy
 
 Ordem: `oficina-infra-cluster` (ECR, tópicos e filas) → `oficina-infra-database` (tabelas DynamoDB)
 → este serviço. O workflow [`deploy.yml`](.github/workflows/deploy.yml) roda manualmente ou numa tag
 `v*`: confere as tabelas, publica a imagem no ECR, resolve ARN/URL da mensageria pelo nome e aplica
 `k8s/overlays/aws` no EKS. Secrets do repositório: `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`,
-`AWS_SESSION_TOKEN` e `JWT_SECRET`.
+`AWS_SESSION_TOKEN` e `JWT_SECRET`; `NEW_RELIC_LICENSE_KEY` (opcional) liga a observabilidade.
